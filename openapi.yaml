@@ -1,0 +1,880 @@
+openapi: 3.0.3
+info:
+  title: IoT Cloud API
+  version: 1.0.0
+  description: >
+    API specification for the IoT Cloud backend. This service manages users,
+    admins, applications, templates, and IoT instances. Instance lifecycle
+    actions are delegated to the IoT Containers automation service.
+servers:
+  - url: http://localhost:2000
+    description: Local development server
+tags:
+  - name: Auth
+  - name: Admin
+  - name: Users
+  - name: Applications
+  - name: Instances
+  - name: Templates
+  - name: Uploads
+security:
+  - bearerAuth: []
+paths:
+  /register:
+    post:
+      tags: [Auth]
+      summary: Register a user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegisterRequest"
+      responses:
+        "200":
+          description: User registered successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRegisterResponse"
+        "409":
+          description: User already registered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /client:
+    post:
+      tags: [Auth]
+      summary: Register a client user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientRegisterRequest"
+      responses:
+        "200":
+          description: Client registered successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRegisterResponse"
+        "409":
+          description: Client already registered.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /login:
+    post:
+      tags: [Auth]
+      summary: Log in a user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /loginverify:
+    post:
+      tags: [Auth]
+      summary: Verify the current user token
+      responses:
+        "200":
+          description: Authenticated user details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /logout:
+    post:
+      tags: [Auth]
+      summary: Log out a user
+      security: []
+      responses:
+        "200":
+          description: Logout message.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /getprofile:
+    get:
+      tags: [Users]
+      summary: Get the authenticated user profile
+      responses:
+        "200":
+          description: User profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /editprofile:
+    put:
+      tags: [Users]
+      summary: Edit the authenticated user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditProfileRequest"
+      responses:
+        "200":
+          description: Profile updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  editData:
+                    $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /viewpublicprofile:
+    get:
+      tags: [Users]
+      summary: List public user profiles
+      security: []
+      responses:
+        "200":
+          description: Public profiles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+  /users:
+    get:
+      tags: [Users]
+      summary: List users with applications
+      description: Requires an admin user token.
+      responses:
+        "200":
+          description: Users with their applications.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  users:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/User"
+                        - type: object
+                          properties:
+                            applications:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/Application"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get a user by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: User details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      tags: [Users]
+      summary: Edit a user by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditUserRequest"
+      responses:
+        "200":
+          description: User profile updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /adminregister:
+    post:
+      tags: [Admin]
+      summary: Register an admin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRegisterRequest"
+      responses:
+        "200":
+          description: Admin registered successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Admin"
+                  success:
+                    type: string
+        "409":
+          description: Admin already registered.
+  /adminlogincreate:
+    post:
+      tags: [Admin]
+      summary: Log in an admin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Admin login successful.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tokenname:
+                    type: string
+                  Name:
+                    type: string
+                  success:
+                    type: string
+        "400":
+          description: Invalid admin credentials.
+  /viewallprofile:
+    get:
+      tags: [Admin]
+      summary: View all user profiles
+      description: Requires an admin token.
+      responses:
+        "200":
+          description: All user profiles.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  all_profiles:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /application:
+    post:
+      tags: [Applications]
+      summary: Create an application
+      description: Also attempts to create a default instance through the automation service.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApplicationRequest"
+      responses:
+        "200":
+          description: Application created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Application"
+                  success:
+                    type: string
+                  error:
+                    type: string
+                  message:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/ServerError"
+    get:
+      tags: [Applications]
+      summary: List applications
+      parameters:
+        - name: all
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: When present, returns applications not owned by the authenticated user.
+      responses:
+        "200":
+          description: Application list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Application"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /application/status/{id}:
+    put:
+      tags: [Applications]
+      summary: Change application status
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusToggleRequest"
+      responses:
+        "200":
+          description: Status changed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /application/{id}:
+    put:
+      tags: [Applications]
+      summary: Edit an application
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationUpdateRequest"
+      responses:
+        "200":
+          description: Application updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [Applications]
+      summary: Delete an application and its instances
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Application deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /instance:
+    post:
+      tags: [Instances]
+      summary: Create an IoT instance
+      description: Calls the automation service to generate the runtime container files.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInstanceRequest"
+      responses:
+        "200":
+          description: Instance created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        "400":
+          description: Validation or instance limit error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    get:
+      tags: [Instances]
+      summary: List instances
+      parameters:
+        - name: appId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter instances by application ID.
+      responses:
+        "200":
+          description: Instance list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Instance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /instance/{id}:
+    get:
+      tags: [Instances]
+      summary: Get an instance by ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Instance details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  instance:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Instance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [Instances]
+      summary: Delete an instance
+      description: Calls the automation service to remove generated container files.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Instance deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /instance/status/{id}:
+    put:
+      tags: [Instances]
+      summary: Start or stop an instance
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusToggleRequest"
+      responses:
+        "200":
+          description: Status changed or instance limit message.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /templates:
+    get:
+      tags: [Templates]
+      summary: List Node-RED templates
+      security: []
+      responses:
+        "200":
+          description: Template list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  temps:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Template"
+  /imageupload:
+    post:
+      tags: [Uploads]
+      summary: Upload an image
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [images]
+              properties:
+                images:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Uploaded image URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: integer
+                    example: 1
+                  imageUrl:
+                    type: string
+                    format: uri
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: MongoDB document ID.
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MessageResponse"
+    Forbidden:
+      description: Authenticated user does not have permission.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MessageResponse"
+    ServerError:
+      description: Server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SuccessMessageResponse"
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        username:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          example: User
+        clientInstance:
+          type: string
+          nullable: true
+        purpose:
+          type: string
+          enum: [Personal, Education, Business]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Admin:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+    Application:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        user:
+          type: string
+        status:
+          type: string
+          enum: [active, stopped]
+        log:
+          type: array
+          items:
+            type: string
+        instances:
+          type: array
+          items:
+            type: string
+    Instance:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        user:
+          type: string
+        status:
+          type: string
+          enum: [running, stopped]
+        log:
+          type: string
+        application:
+          oneOf:
+            - type: string
+            - $ref: "#/components/schemas/Application"
+        url:
+          type: string
+        deployed:
+          type: boolean
+        dashboardUrl:
+          type: string
+        container_id:
+          type: string
+        volumeName:
+          type: string
+        mqttPort:
+          type: string
+        wsPort:
+          type: string
+        serviceName:
+          type: string
+        template:
+          type: string
+    Template:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+          example: default
+    UserRegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        role:
+          type: string
+          default: User
+        purpose:
+          type: string
+          enum: [Personal, Education, Business]
+          default: Personal
+    ClientRegisterRequest:
+      type: object
+      required: [clientName, clientPassword, instanceUrl]
+      properties:
+        clientName:
+          type: string
+        clientPassword:
+          type: string
+          format: password
+        instanceUrl:
+          type: string
+    AdminRegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          description: User email or username.
+        password:
+          type: string
+          format: password
+    LoginResponse:
+      type: object
+      properties:
+        tokenname:
+          type: string
+        Name:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        success:
+          type: string
+    UserRegisterResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/User"
+        success:
+          type: string
+    EditProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        number:
+          type: string
+        bio:
+          type: string
+        profile:
+          type: string
+          example: Public
+        imageupload:
+          type: string
+    EditUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        currentPassword:
+          type: string
+          format: password
+    CreateApplicationRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        instance:
+          type: string
+          description: Optional initial instance name.
+        template:
+          type: string
+          default: default
+    ApplicationUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, stopped]
+    CreateInstanceRequest:
+      type: object
+      required: [instanceName, app]
+      properties:
+        instanceName:
+          type: string
+        app:
+          type: string
+          description: Application ID.
+        template:
+          type: string
+          default: default
+    StatusToggleRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: boolean
+          description: true starts/enables; false stops/disables.
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    SuccessMessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        error:
+          type: string
